@@ -61,7 +61,7 @@ def main():
     n = 400
     nn = 800
     K = 200
-    n_jobs = 8
+    n_jobs = 4  # gaussian sim concurrently using 8 cores; leave 4 for heatmap to avoid hard oversubscription. BLAS pinned to 1 thread by env vars above, so each worker is single-threaded.
 
     sigma, sigma1 = 1, 2
     dd = 1.0  # mid-point of §4.3 sweep (c_d = 0 -> dd = e^0 = 1.0)
