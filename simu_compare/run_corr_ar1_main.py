@@ -61,7 +61,8 @@ def compute_errnorm_ar1(i, p, n, nn, beta_0, w_0, sigma, sigma1, L,
         tau_range=tau_range,
     )
     keys = ["single_robust_ridge", "transfer_robust_ridge", "adaptive", "pooled_robust_ridge"]
-    return tuple(np.sum((res[k]["betahat"] - beta_0) ** 2) / np.sum(beta_0 ** 2) for k in keys)
+    errnorms = tuple(np.sum((res[k]["betahat"] - beta_0) ** 2) / np.sum(beta_0 ** 2) for k in keys)
+    return errnorms + (float(res["adaptive"]["theta_star"]),)  # 4 errnorms + 1 theta_star
 
 
 def run_dd(p, n, K, dd, rho, n_jobs, tau_range):
@@ -82,11 +83,13 @@ def run_dd(p, n, K, dd, rho, n_jobs, tau_range):
         for i in tqdm(range(K), desc=f"rho={rho:.1f} dd={dd:.3f}")
     )
 
-    errnorm = np.array(results_list)
+    arr = np.array(results_list)
+    errnorm = arr[:, :4]
+    theta_values = arr[:, 4]
     mean_err = np.nanmean(errnorm, axis=0)
     std_err = np.nanstd(errnorm, axis=0)
     cols = ["Single RR", "Trans RR", "Trans-RR-Ada", "Pooled RR"]
-    return mean_err, std_err, pd.DataFrame(errnorm, columns=cols)
+    return mean_err, std_err, pd.DataFrame(errnorm, columns=cols), theta_values
 
 
 def main():
@@ -109,7 +112,7 @@ def main():
     t0 = time.time()
     for rho in rho_values:
         for dd_val in dd_values:
-            mean_err, std_err, df = run_dd(
+            mean_err, std_err, df, thetas = run_dd(
                 p=p_val, n=n_val, K=K_val, dd=dd_val, rho=rho,
                 n_jobs=n_jobs_val, tau_range=tau_range_val,
             )
@@ -120,6 +123,7 @@ def main():
                 "mean_err": mean_err,
                 "std_err": std_err,
                 "results_df": df,
+                "theta_star": thetas.tolist(),
             }
             print(f"  rho={rho} dd={dd_val:.4f}  mean_err = {[f'{x:.4f}' for x in mean_err]}")
 
@@ -132,6 +136,7 @@ def main():
             "mean_err":    item["mean_err"].tolist(),
             "std_err":     item["std_err"].tolist(),
             "results_df":  item["results_df"].to_dict(),
+            "theta_star":  item["theta_star"],
         }
         for key, item in all_results.items()
     }

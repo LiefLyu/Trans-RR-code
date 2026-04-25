@@ -86,7 +86,8 @@ def worker(seed, case, p, n, nn, beta_0, w_0, sigma, sigma1,
         criterion=criterion, loss=loss,
     )
     keys = ["single_robust_ridge", "transfer_robust_ridge", "adaptive", "pooled_robust_ridge"]
-    return tuple(np.sum((res[k]["betahat"] - beta_0) ** 2) / np.sum(beta_0 ** 2) for k in keys)
+    errnorms = tuple(np.sum((res[k]["betahat"] - beta_0) ** 2) / np.sum(beta_0 ** 2) for k in keys)
+    return errnorms + (float(res["adaptive"]["theta_star"]),)
 
 
 def run_one_cell(case, dd, criterion, loss, p, n, K, n_jobs, tau_range):
@@ -107,10 +108,13 @@ def run_one_cell(case, dd, criterion, loss, p, n, K, n_jobs, tau_range):
         for i in tqdm(range(K), desc=desc)
     )
     arr = np.array(results_list)
+    errnorm = arr[:, :4]
+    thetas = arr[:, 4]
     return {
         "case": case, "dd": float(dd), "criterion": criterion, "loss": loss,
-        "mean_err": arr.mean(axis=0).tolist(),
-        "std_err":  arr.std(axis=0).tolist(),
+        "mean_err":     errnorm.mean(axis=0).tolist(),
+        "std_err":      errnorm.std(axis=0).tolist(),
+        "theta_star":   thetas.tolist(),
         "method_names": ["Single RR", "Trans RR", "Trans-RR-Ada", "Pooled RR"],
     }
 

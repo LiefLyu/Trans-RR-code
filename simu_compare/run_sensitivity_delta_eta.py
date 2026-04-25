@@ -52,7 +52,8 @@ def compute_errnorm_cell(i, p, n, nn, beta_0, w_0, sigma, sigma1,
     err_sr = float(np.sum((res["single_robust_ridge"]["betahat"] - beta_0) ** 2) / np.sum(beta_0 ** 2))
     err_ada = float(np.sum((res["adaptive"]["betahat"] - beta_0) ** 2) / np.sum(beta_0 ** 2))
     tau_sr = float(res["single_robust_ridge"]["optimal_tau"])
-    return err_tr, err_sr, err_ada, tau_sr
+    theta_star = float(res["adaptive"]["theta_star"])
+    return err_tr, err_sr, err_ada, tau_sr, theta_star
 
 
 def main():
@@ -95,12 +96,13 @@ def main():
             cells[cell_key] = {
                 "delta": d,
                 "eta": e,
-                "trans_err":   arr[:, 0].tolist(),
-                "single_err":  arr[:, 1].tolist(),
-                "adaptive_err": arr[:, 2].tolist(),
-                "tau_star":    arr[:, 3].tolist(),
-                "trans_mean":  float(arr[:, 0].mean()),
-                "single_mean": float(arr[:, 1].mean()),
+                "trans_err":     arr[:, 0].tolist(),
+                "single_err":    arr[:, 1].tolist(),
+                "adaptive_err":  arr[:, 2].tolist(),
+                "tau_star":      arr[:, 3].tolist(),
+                "theta_star":    arr[:, 4].tolist(),
+                "trans_mean":    float(arr[:, 0].mean()),
+                "single_mean":   float(arr[:, 1].mean()),
                 "adaptive_mean": float(arr[:, 2].mean()),
             }
             print(f"  delta={d:.2f} eta={e:.2f}  Trans-RR={cells[cell_key]['trans_mean']:.4f}  "

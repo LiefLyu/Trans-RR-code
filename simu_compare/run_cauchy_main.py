@@ -55,7 +55,8 @@ def compute_errnorm_cauchy(i, p, n, nn, beta_0, w_0, sigma, sigma1,
         res["transfer_robust_ridge"]["optimal_tau_target_diff"],
         res["pooled_robust_ridge"]["optimal_tau"],
     )
-    return errnorms + taus  # 4 errnorms + 4 taus = 8 elements
+    theta_star = (float(res["adaptive"]["theta_star"]),)
+    return errnorms + taus + theta_star  # 4 errnorms + 4 taus + 1 theta_star = 9 elements
 
 
 def run_dd(p, n, K, dd, n_jobs, tau_range):
@@ -77,12 +78,13 @@ def run_dd(p, n, K, dd, n_jobs, tau_range):
 
     errnorm_values = np.array([r[0:4] for r in results_list])
     tau_values = np.array([r[4:8] for r in results_list])
+    theta_values = np.array([r[8] for r in results_list])
 
     mean_err = np.nanmean(errnorm_values, axis=0)
     std_err = np.nanstd(errnorm_values, axis=0)
 
     cols = ["Single RR", "Trans RR", "Trans-RR-Ada", "Pooled RR"]
-    return mean_err, std_err, pd.DataFrame(errnorm_values, columns=cols), tau_values
+    return mean_err, std_err, pd.DataFrame(errnorm_values, columns=cols), tau_values, theta_values
 
 
 def main():
@@ -102,7 +104,7 @@ def main():
     all_results = {}
     t0 = time.time()
     for dd_val in dd_values:
-        mean_err, std_err, df, taus = run_dd(
+        mean_err, std_err, df, taus, thetas = run_dd(
             p=p_val, n=n_val, K=K_val, dd=dd_val,
             n_jobs=n_jobs_val, tau_range=tau_range_val,
         )
@@ -110,6 +112,7 @@ def main():
             "mean_err": mean_err,
             "std_err": std_err,
             "results_df": df,
+            "theta_star": thetas.tolist(),
         }
         print(f"  dd={dd_val:.4f}  mean_errnorm = {[f'{x:.4f}' for x in mean_err]}")
 
@@ -120,6 +123,7 @@ def main():
             "mean_err":   item["mean_err"].tolist(),
             "std_err":    item["std_err"].tolist(),
             "results_df": item["results_df"].to_dict(),
+            "theta_star": item["theta_star"],
         }
         for dd_val, item in all_results.items()
     }
