@@ -3,8 +3,9 @@ Adaptive aggregation of Trans-RR and Single-RR via CV-selected weight theta.
 
 Defines beta_ada = theta * beta_trans + (1 - theta) * beta_single,
 with theta chosen on a grid by minimizing the held-out validation loss
-of the convex combination on the same fold partition used to tune the
-base estimators.
+of the convex combination on a K-fold partition that is INDEPENDENT
+of the partition used to tune the base estimators' ridge penalties
+(see Algorithm 2 in the paper).
 
 When theta = 1 -> beta_trans (the original Trans-RR).
 When theta = 0 -> beta_single.
@@ -27,22 +28,29 @@ def aggregate_by_cv(
     criterion='mae',
 ):
     """
-    Pick the convex-combination weight theta by 5-fold CV.
+    Pick the convex-combination weight theta by K-fold CV on the partition
+    described by fold_indices.
 
-    The two base estimators must have been tuned on the SAME fold partition
-    (i.e. the find_tau_opt KFold seed is the same for both). Otherwise the
-    aggregate CV loss is not well-defined.
+    The fold-level base estimators fold_betas_trans[k] and fold_betas_single[k]
+    must be computed on the SAME training portion (i.e. fold_indices[k]'s
+    train_idx); otherwise the validation residual on the corresponding val_idx
+    is not well-defined for the convex combination.
+
+    fold_indices may be drawn independently of any partition used to tune the
+    base estimators' ridge penalties; the caller is responsible for refitting
+    the fold-level base estimators on the partition described here.
 
     Parameters
     ----------
     fold_indices : list of (train_idx, val_idx) pairs
-        The fold partition. Same one used by both base estimators' inner CV.
+        The fold partition. Same partition used to construct both
+        fold_betas_trans and fold_betas_single below.
     fold_betas_trans : list of np.ndarray, length n_folds
-        beta_trans on each fold's training portion at tau_opt_trans.
+        Trans-RR fitted on each fold's train_idx at the tuned tau_opt_trans.
     fold_betas_single : list of np.ndarray, length n_folds
-        beta_single on each fold's training portion at tau_opt_single.
+        Single-RR fitted on each fold's train_idx at the tuned tau_opt_single.
     X : (n, p) np.ndarray
-        Full target training design matrix used for the two base CVs.
+        Full target training design matrix.
     Y : (n,) np.ndarray
         Full target training response.
     beta_trans_full : (p,) np.ndarray

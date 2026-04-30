@@ -7,9 +7,9 @@ errors) only since the sensitivity to design covariance is the focus.
 Setup: cov(x_i) = Σ with Σ_{jk} = ρ^|j−k|, ρ ∈ {0.3, 0.6}.
 Methods: Single-RR / Trans-RR / Trans-RR-Ada / Pooled-RR (no Lasso, since we
 already established under non-sparse coefficients Lasso is dominated).
-500 reps × 7 h × 2 ρ values.
+1000 reps × 7 h × 2 ρ values.
 
-Output: res/2corr_ar1_results_p400_simu500.json (one entry per (rho, dd) pair)
+Output: res/2corr_ar1_results_p400_simu1000.json (one entry per (rho, dd) pair)
 """
 import os
 
@@ -95,7 +95,7 @@ def run_dd(p, n, K, dd, rho, n_jobs, tau_range):
 def main():
     p_val = 400
     n_val = 400
-    K_val = 500
+    K_val = 1000
     n_jobs_val = 8
 
     tau_range_val = np.logspace(0, 1, 10, base=3)

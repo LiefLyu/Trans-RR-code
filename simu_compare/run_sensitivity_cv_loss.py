@@ -3,11 +3,11 @@
 (ii) Robust loss: smoothed_huber (default) -> pseudo_huber
 
 Reruns Cases I/II/III at three discrepancy levels (small/medium/large h)
-with 500 reps per cell. Output a single JSON containing both sweeps.
+with 1000 reps per cell. Output a single JSON containing both sweeps.
 
 Methods: Single-RR / Trans-RR / Trans-RR-Ada / Pooled-RR.
 
-Output: res/2sensitivity_cv_loss_p400_simu500.json
+Output: res/2sensitivity_cv_loss_p400_simu1000.json
 """
 import os
 
@@ -122,7 +122,7 @@ def run_one_cell(case, dd, criterion, loss, p, n, K, n_jobs, tau_range):
 def main():
     p = 400
     n = 400
-    K = 500
+    K = 1000
     n_jobs = 8
 
     tau_range_g = np.logspace(0, 1, 10, base=3)

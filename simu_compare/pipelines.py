@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 from sklearn.linear_model import LassoCV
+from sklearn.model_selection import KFold
 
 # 让 transrr_lib 可被 import（experiment/ 在 simu_compare/ 的上一级）
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +15,11 @@ from transrr_lib.find_tau_opt import find_optimal_tau_robust_ridge
 from transrr_lib.robust_ridge_optimizer import solve_robust_ridge
 from transrr_lib.adaptive import aggregate_by_cv
 from TransLasso_functions import trans_lasso
+
+# Adaptive uses an independent K-fold partition for theta selection,
+# distinct from the partition used inside find_optimal_tau_robust_ridge
+# (which is KFold(random_state=1)).
+_ADAPTIVE_KFOLD_SEED = 2
 
 
 # ============================================================
@@ -53,10 +59,14 @@ def _compute_ridge_methods_with_adaptive(
     Fits Single-RR, Trans-RR, Pooled-RR plus the Adaptive aggregate
     beta_ada = theta * beta_trans + (1 - theta) * beta_single.
 
-    The Single-RR and Trans-RR target-step CVs both return per-fold
-    estimators on the SAME fold partition (KFold seed=1 inside
-    find_optimal_tau_robust_ridge), so the Adaptive layer can pick
-    theta on a grid by minimising the convex-combination CV loss.
+    Tau-tuning for Single-RR and Trans-RR target step uses
+    KFold(seed=1) inside find_optimal_tau_robust_ridge.
+    The Adaptive layer then draws an INDEPENDENT KFold(seed=2)
+    partition of the target sample, refits the K fold-level
+    base estimators at the already-tuned tau and tau_st (with
+    w_hat held fixed), and picks theta on a grid by minimising
+    the convex-combination CV loss on this independent partition
+    (Algorithm 2, Steps 1--4 in the paper).
 
     Returns
     -------
@@ -134,16 +144,47 @@ def _compute_ridge_methods_with_adaptive(
         initial_beta=initial_guess_pr, loss=loss,
     )
 
-    # 4. Adaptive aggregation
-    # Per-fold Trans-RR beta on TARGET data:
-    #   beta_trans^{(-k)} = delta_hat_diff^{(-k)} + w_hat_trans
-    # because Trans-RR's final beta = (delta_diff fit on target) + w_hat_trans,
-    # and validation residual on target with this beta equals the residual
-    # that find_tau_opt already used internally on (train_X, Y_adjusted).
-    fold_betas_trans = [b + w_hat_trans for b in res_tr_diff['fold_betas']]
-    fold_betas_single = list(res_sr['fold_betas'])
-    # Sanity: same fold partition (both used the default KFold seed inside find_tau_opt).
-    fold_indices = res_sr['fold_indices']
+    # 4. Adaptive aggregation on an INDEPENDENT K-fold partition.
+    # The base estimators' tau-tuning used KFold(random_state=1) inside
+    # find_optimal_tau_robust_ridge. To keep theta selection from being
+    # contaminated by the same partition that picked the taus, we draw a
+    # separate K-fold partition (seed=2) and refit the K fold-level
+    # base estimators at the already-tuned (tau, tau_st) and the fixed w_hat.
+    # This adds 2*K extra solver calls per simulation replicate
+    # (about 5% of the overall computation).
+    kf_ada = KFold(n_splits=5, shuffle=True, random_state=_ADAPTIVE_KFOLD_SEED)
+    fold_indices = list(kf_ada.split(train_X))
+
+    fold_betas_single = []
+    fold_betas_trans = []
+    for train_idx, _ in fold_indices:
+        X_tr = train_X[train_idx]
+        Y_tr = train_y[train_idx]
+        n_tr = len(Y_tr)
+
+        # Fold-level Single-RR at tuned tau_st = optimal_tau_sr
+        init_sr = np.linalg.solve(
+            X_tr.T @ X_tr / n_tr + optimal_tau_sr * np.eye(n_features),
+            X_tr.T @ Y_tr / n_tr,
+        )
+        beta_sr_fold = solve_robust_ridge(
+            X_tr, Y_tr, optimal_tau_sr, delta_param, eta_param,
+            initial_beta=init_sr, loss=loss,
+        )
+        fold_betas_single.append(beta_sr_fold)
+
+        # Fold-level Trans-RR target step at tuned tau = optimal_tau_tr_diff,
+        # with w_hat_trans (from full-source fit) held fixed.
+        Y_adj_tr = Y_tr - X_tr @ w_hat_trans
+        init_tr = np.linalg.solve(
+            X_tr.T @ X_tr / n_tr + optimal_tau_tr_diff * np.eye(n_features),
+            X_tr.T @ Y_adj_tr / n_tr,
+        )
+        delta_fold = solve_robust_ridge(
+            X_tr, Y_adj_tr, optimal_tau_tr_diff, delta_param, eta_param,
+            initial_beta=init_tr, loss=loss,
+        )
+        fold_betas_trans.append(delta_fold + w_hat_trans)
 
     ada_res = aggregate_by_cv(
         fold_indices=fold_indices,

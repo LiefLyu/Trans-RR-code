@@ -4,11 +4,11 @@ Verifies that the recommended (delta, eta) = (1.35, 0.1) is in a flat region of
 parameter space, not a sweet spot. Case II (Cauchy errors) is used because that
 is where the smoothed Huber loss matters most.
 
-Setup: 12 cells of (delta, eta) grid x 200 reps, fixed dd at the mid-point of
+Setup: 12 cells of (delta, eta) grid x 1000 reps, fixed dd at the mid-point of
 the §4.3 sweep (c_d = 0 -> dd = 1.0). Records Trans-RR errnorm and tau* for
 each cell, plus a histogram of selected tau* across reps for diagnostic.
 
-Output: res/2sensitivity_delta_eta_p400_simu200.json
+Output: res/2sensitivity_delta_eta_p400_simu1000.json
 """
 import os
 
@@ -60,7 +60,7 @@ def main():
     p = 400
     n = 400
     nn = 800
-    K = 200
+    K = 1000
     n_jobs = 4  # gaussian sim concurrently using 8 cores; leave 4 for heatmap to avoid hard oversubscription. BLAS pinned to 1 thread by env vars above, so each worker is single-threaded.
 
     sigma, sigma1 = 1, 2

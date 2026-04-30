@@ -5,6 +5,7 @@ import warnings
 from sklearn.linear_model import LassoCV
 from sklearn.metrics import r2_score
 from sklearn.exceptions import ConvergenceWarning
+from sklearn.model_selection import KFold
 
 import os, sys
 _EXP_ROOT = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
@@ -14,6 +15,11 @@ from transrr_lib.robust_ridge_optimizer import solve_robust_ridge
 from transrr_lib.find_tau_opt import find_optimal_tau_robust_ridge
 
 warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
+# Adaptive uses an INDEPENDENT KFold partition (seed=2), distinct from
+# the partition used inside find_optimal_tau_robust_ridge (seed=1) for
+# tau-tuning. This matches Algorithm 2 in the paper.
+_ADAPTIVE_KFOLD_SEED = 2
 
 
 # Fixed config (per-split protocol)
@@ -188,8 +194,12 @@ def adaptive_select_theta_realdata(
     model_w_beta, mu_train_y1, mu_Y_adjusted, mu_train_y,
     theta_grid=None, criterion='mse',
 ):
-    """Pick theta on the same fold partition by minimising CV residuals of
-    theta * pred_trans + (1 - theta) * pred_single, evaluated in original-y space.
+    """Pick theta on the partition described by fold_indices by minimising
+    CV residuals of theta * pred_trans + (1 - theta) * pred_single, evaluated
+    in original-y space. The caller is responsible for supplying fold-level
+    estimators consistent with this partition; in Algorithm 2 of the paper
+    the partition is drawn independently of the one used to tune the
+    base estimators' ridge penalties.
 
     Validation residual at fold k for a candidate theta:
       r_k(theta) = y_train[val_idx]
@@ -269,17 +279,57 @@ def run_one_split(direction_name, target_train, target_test, source_train, split
     pred_pr = predict_robust_center_no_intercept(model_pr, test_X)
 
     # 4) Adaptive Trans-RR (Trans-RR-Ada): convex combination via CV-selected theta
-    # Single-RR and Trans-RR target step share the same KFold partition (random_state=1
-    # inside find_tau_opt, applied to two arrays of the same length n_train).
+    # on an INDEPENDENT K-fold partition (seed=2) of the target sample.
+    # The fold-level base estimators are refit at the already-tuned tau values
+    # (model_sr['tau'], model_diff['tau']) with the full-sample model_w['beta']
+    # and y-centering means held fixed, so theta is selected on validation
+    # residuals that did not enter the ridge-penalty tuning.
+    mu_train_y    = model_sr['y_stats']['mu']
+    mu_train_y1   = model_w['y_stats']['mu']
+    mu_Y_adjusted = model_diff['y_stats']['mu']
+    y_centered     = train_y - mu_train_y
+    Y_adj_centered = Y_adjusted - mu_Y_adjusted
+
+    kf_ada = KFold(n_splits=5, shuffle=True, random_state=_ADAPTIVE_KFOLD_SEED)
+    fold_indices_ada = list(kf_ada.split(train_X))
+
+    fold_betas_sr_ada   = []
+    fold_betas_diff_ada = []
+    for tr_idx, _ in fold_indices_ada:
+        X_tr       = train_X[tr_idx]
+        y_t_tr     = y_centered[tr_idx]
+        Y_adj_t_tr = Y_adj_centered[tr_idx]
+        n_tr = len(y_t_tr)
+
+        init_sr = np.linalg.solve(
+            X_tr.T @ X_tr / n_tr + model_sr['tau'] * np.eye(X_tr.shape[1]),
+            X_tr.T @ y_t_tr / n_tr,
+        )
+        beta_sr_k = solve_robust_ridge(
+            X_tr, y_t_tr, model_sr['tau'], DELTA_PARAM, ETA_PARAM,
+            initial_beta=init_sr,
+        )
+        fold_betas_sr_ada.append(beta_sr_k)
+
+        init_diff = np.linalg.solve(
+            X_tr.T @ X_tr / n_tr + model_diff['tau'] * np.eye(X_tr.shape[1]),
+            X_tr.T @ Y_adj_t_tr / n_tr,
+        )
+        delta_k = solve_robust_ridge(
+            X_tr, Y_adj_t_tr, model_diff['tau'], DELTA_PARAM, ETA_PARAM,
+            initial_beta=init_diff,
+        )
+        fold_betas_diff_ada.append(delta_k)
+
     theta_star, cv_curve = adaptive_select_theta_realdata(
-        fold_indices=model_sr['fold_indices'],
-        fold_betas_sr=model_sr['fold_betas'],
-        fold_betas_diff=model_diff['fold_betas'],
+        fold_indices=fold_indices_ada,
+        fold_betas_sr=fold_betas_sr_ada,
+        fold_betas_diff=fold_betas_diff_ada,
         train_X=train_X, train_y=train_y,
         model_w_beta=model_w['beta'],
-        mu_train_y1=model_w['y_stats']['mu'],
-        mu_Y_adjusted=model_diff['y_stats']['mu'],
-        mu_train_y=model_sr['y_stats']['mu'],
+        mu_train_y1=mu_train_y1,
+        mu_Y_adjusted=mu_Y_adjusted,
+        mu_train_y=mu_train_y,
         theta_grid=THETA_GRID,
         criterion='mse',
     )
