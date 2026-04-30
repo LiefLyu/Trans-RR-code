@@ -1,6 +1,6 @@
 """Generate methods_comparison_corr.pdf from the AR(1) results.
 
-Reads:  res/2corr_ar1_results_p400_simu500.json
+Reads:  res/2corr_ar1_results_p400_simu1000.json
 Writes: res/methods_comparison_corr.pdf  (then to be copied to ustc-overleaf-git/plot/)
 
 Two-panel boxplot, 4 methods, two correlation levels rho ∈ {0.3, 0.6}.
@@ -31,7 +31,7 @@ METHOD_LABELS = {
 
 
 def main():
-    src = Path("res/2corr_ar1_results_p400_simu500.json")
+    src = Path("res/2corr_ar1_results_p400_simu1000.json")
     if not src.exists():
         raise SystemExit(f"Missing {src}")
 

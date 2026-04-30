@@ -61,7 +61,7 @@ def main():
     n = 400
     nn = 800
     K = 100
-    n_jobs = 4  # gaussian sim is using 8 cores; leave 4 for this diagnostic to avoid oversubscription
+    n_jobs = 8  # serial schedule: full 8 P-cores
 
     sigma, sigma1 = 1, 2
     tau_range = np.logspace(0, 1, 10, base=3)

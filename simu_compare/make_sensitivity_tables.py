@@ -23,19 +23,19 @@ def load(path):
 # Table B1: (delta, eta) heatmap
 # ============================================================
 print(r"""% ============================================================
-% Table B1: (delta, eta) sensitivity heatmap (Case II, dd = 1.0, K = 200)
+% Table B1: (delta, eta) sensitivity heatmap (Case II, dd = 1.0, M = 1000)
 % ============================================================
 \begin{table}[htbp]
 \centering
 \setlength\tabcolsep{8pt}
-\caption{Sensitivity of relative estimation error to the smoothed Huber loss parameters $(\delta, \eta)$. Setup: Case $\II$ (Cauchy errors), $p = 400$, $n = 400$, $h = 1.0$, $K = 200$ replications. Each cell reports Single-RR / Trans-RR / Trans-RR-Ada mean errors. The variation of Trans-RR across the twelve cells is about $5\%$ of its mean and the ranking is preserved in every cell.}
+\caption{Sensitivity of relative estimation error to the smoothed Huber loss parameters $(\delta, \eta)$. Setup: Case $\II$ (Cauchy errors), $p = 400$, $n = 400$, $h = 1.0$, $M = 1000$ replications. Each cell reports Single-RR / Trans-RR / Trans-RR-Ada mean errors. The variation of Trans-RR across the twelve cells is about $5\%$ of its mean and the ranking is preserved in every cell.}
 \label{tab:sens_delta_eta}
 \begin{tabular}{c c c c}
 \toprule
 $\delta \backslash \eta$ & $0.05$ & $0.10$ & $0.20$ \\
 \midrule""")
 
-heatmap = load(EXP / "simu_compare/res/2sensitivity_delta_eta_p400_simu200.json")
+heatmap = load(EXP / "simu_compare/res/2sensitivity_delta_eta_p400_simu1000.json")
 deltas = heatmap["delta_grid"]
 etas = heatmap["eta_grid"]
 cells = heatmap["cells"]
@@ -107,12 +107,12 @@ render_alt_sweep(
         "key": "mse_cv",
         "caption": (
             "Sensitivity of relative estimation error to the cross-validation criterion. "
-            "All settings as in Figure \\ref{figmethods} except the validation loss for ridge-penalty selection is changed from MAE to MSE. "
-            "Setup: $K = 500$ replications per cell. Bold marks the smallest mean per row. "
+            "All settings as in Figure \\ref{figmethods} except all CV validation losses (used to select $\\tau_1$, $\\tau$, $\\tau_{\\mathrm{st}}$, and $\\theta$) are changed from MAE to MSE. "
+            "Setup: $M = 1000$ replications per cell. Bold marks the smallest mean per row. "
             "Under Case $\\I$ the rankings agree with the MAE-CV main results; under Cases $\\II$ and $\\III$, MSE-CV destabilises Trans-RR, which becomes uniformly worse than Single-RR."
         ),
     },
-    json_path=EXP / "simu_compare/res/2sensitivity_cv_loss_p400_simu500.json",
+    json_path=EXP / "simu_compare/res/2sensitivity_cv_loss_p400_simu1000.json",
     sweep_key="mse_smoothed_huber",
     baseline_path=None,
 )
@@ -129,11 +129,11 @@ render_alt_sweep(
             "Sensitivity of relative estimation error to the choice of robust loss. "
             "All settings as in Figure \\ref{figmethods} except the smoothed Huber loss is replaced by the pseudo-Huber loss "
             "$\\rho_{\\mathrm{PH}}(t; \\delta) = \\delta^2(\\sqrt{1 + (t/\\delta)^2} - 1)$ with $\\delta = 1.35$ (the smoothing parameter $\\eta$ is no longer needed). "
-            "Setup: $K = 500$ replications per cell. Bold marks the smallest mean per row. "
+            "Setup: $M = 1000$ replications per cell. Bold marks the smallest mean per row. "
             "The rankings agree with the smoothed-Huber main results across all three cases and the discrepancy sweep."
         ),
     },
-    json_path=EXP / "simu_compare/res/2sensitivity_cv_loss_p400_simu500.json",
+    json_path=EXP / "simu_compare/res/2sensitivity_cv_loss_p400_simu1000.json",
     sweep_key="mae_pseudo_huber",
     baseline_path=None,
 )
