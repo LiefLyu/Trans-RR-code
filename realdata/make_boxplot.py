@@ -39,7 +39,7 @@ DIRECTION_LABEL = {
 
 
 def main():
-    src = Path("res/realdata_rmse_main.json")
+    src = Path("res/realdata_rmse_main_mae.json")  # MAE-CV variant matches Table 2 in major_v2.tex
     if not src.exists():
         raise SystemExit(f"Missing {src}. Run realdata 5-config first.")
 
