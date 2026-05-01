@@ -61,7 +61,7 @@ def main():
     n = 400
     nn = 800
     K = 1000
-    n_jobs = 6  # realdata runs concurrent; 6+2 keeps 8 P-cores fully utilised. BLAS pinned to 1 thread by env vars above.
+    n_jobs = 8  # serial schedule: full 8 P-cores. BLAS pinned to 1 thread by env vars above.
 
     sigma, sigma1 = 1, 2
     dd = 1.0  # mid-point of §4.3 sweep (c_d = 0 -> dd = e^0 = 1.0)
