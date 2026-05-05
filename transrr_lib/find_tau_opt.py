@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.model_selection import KFold
 
+from ._grids import TAU_GRID
 from .robust_ridge_optimizer import solve_robust_ridge
 
 
@@ -27,7 +28,7 @@ def find_optimal_tau_robust_ridge(
     Y : (n,) np.ndarray
     n_folds : int, default 5
     tau_range : 1D array-like or None
-        Candidate tau values. None -> default log-grid np.logspace(-2, 1, 19, base=3).
+        Candidate tau values. None -> default ``transrr_lib._grids.TAU_GRID``.
     psi_delta : float
         delta in the robust loss (paper default 1.35).
     psi_eta : float
@@ -58,7 +59,7 @@ def find_optimal_tau_robust_ridge(
         raise ValueError(f"loss must be 'smoothed_huber' or 'pseudo_huber', got {loss!r}")
 
     if tau_range is None:
-        tau_range = np.logspace(-2, 1, 19, base=3)
+        tau_range = TAU_GRID
     tau_range = np.asarray(tau_range, dtype=float)
 
     kf = KFold(n_splits=n_folds, shuffle=True, random_state=1)

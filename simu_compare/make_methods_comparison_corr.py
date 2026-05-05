@@ -1,9 +1,10 @@
-"""Generate methods_comparison_corr.pdf from the AR(1) results.
+"""Generate methods_comparison_corr.pdf from the 3-cases AR(1) results.
 
-Reads:  res/2corr_ar1_results_p400_simu1000.json
+Reads:  res/2corr_ar1_3cases_p400_simu500.json
 Writes: res/methods_comparison_corr.pdf  (then to be copied to ustc-overleaf-git/plot/)
 
-Two-panel boxplot, 4 methods, two correlation levels rho ∈ {0.3, 0.6}.
+Three-panel boxplot, 4 ridge methods, three error/design cases at fixed rho.
+Mirrors the structure of Figure 3 (figmethods).
 """
 import json
 from pathlib import Path
@@ -29,30 +30,34 @@ METHOD_LABELS = {
     "Pooled RR":    "Pooled-RR",
 }
 
+CASE_ORDER = ["gaussian", "cauchy", "mix"]
+CASE_DISPLAY = {
+    "gaussian": "case I",
+    "cauchy":   "case II",
+    "mix":      "case III",
+}
+
 
 def main():
-    src = Path("res/2corr_ar1_results_p400_simu1000.json")
+    src = Path("res/2corr_ar1_3cases_p400_simu500.json")
     if not src.exists():
         raise SystemExit(f"Missing {src}")
 
     with src.open() as f:
         data = json.load(f)
 
-    # Group by rho
-    rhos_used = sorted({float(item["rho"]) for item in data.values()})
-    n_rows = len(rhos_used)
-
-    fig, axes = plt.subplots(n_rows, 1, figsize=(11, 6.5), dpi=300)
+    n_rows = len(CASE_ORDER)
+    fig, axes = plt.subplots(n_rows, 1, figsize=(11, 9), dpi=300)
     if n_rows == 1:
         axes = [axes]
 
     legend_handles, legend_labels = None, None
 
-    for ax_idx, rho in enumerate(rhos_used):
-        # Collect all cells with this rho
+    for ax_idx, case in enumerate(CASE_ORDER):
+        # Collect all cells with this case
         rows = []
         for key, item in data.items():
-            if abs(float(item["rho"]) - rho) > 1e-9:
+            if item.get("case") != case:
                 continue
             dd_val = float(item["dd"])
             log_dd = np.log(dd_val)
@@ -103,7 +108,7 @@ def main():
         ax.tick_params(axis="y", labelsize=12)
 
         ax.text(
-            0.5, 0.9, rf"$\rho = {rho}$", transform=ax.transAxes,
+            0.5, 0.9, CASE_DISPLAY[case], transform=ax.transAxes,
             ha="center", va="top",
             bbox=dict(boxstyle="round,pad=0.5", facecolor="white", alpha=0.9, edgecolor="#666666"),
             fontsize=14, fontweight="bold",

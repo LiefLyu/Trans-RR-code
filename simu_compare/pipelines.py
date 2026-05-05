@@ -11,6 +11,7 @@ _EXP_ROOT = os.path.abspath(os.path.join(_THIS_DIR, os.pardir))
 if _EXP_ROOT not in sys.path:
     sys.path.insert(0, _EXP_ROOT)
 
+from transrr_lib._grids import TAU_GRID
 from transrr_lib.find_tau_opt import find_optimal_tau_robust_ridge
 from transrr_lib.robust_ridge_optimizer import solve_robust_ridge
 from transrr_lib.adaptive import aggregate_by_cv
@@ -231,7 +232,7 @@ def estimate_regression_models_tl(
     train_X1, train_y1,
     delta_param=1.35,
     eta_param=0.1,
-    tau_range=np.logspace(-3, 1, 10),
+    tau_range=TAU_GRID,
     alphas_custom=None,
     criterion='mae',
     loss='smoothed_huber',
@@ -263,7 +264,7 @@ def estimate_regression_models(
     train_X1, train_y1,
     delta_param=1.35,
     eta_param=0.1,
-    tau_range=np.logspace(-3, 1, 10),
+    tau_range=TAU_GRID,
     alphas_custom=None,
     criterion='mae',
     loss='smoothed_huber',
@@ -305,7 +306,7 @@ def estimate_regression_models_noLASSO(
     train_X1, train_y1,
     delta_param=1.35,
     eta_param=0.1,
-    tau_range=np.logspace(-3, 1, 10),
+    tau_range=TAU_GRID,
     criterion='mae',
     loss='smoothed_huber',
 ):

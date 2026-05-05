@@ -51,7 +51,7 @@ def main():
     cols_in_order = [m for m in ORDER if m in method_names]
     display_labels = [DISPLAY[m] for m in cols_in_order]
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 5), dpi=300, sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4), dpi=300, sharey=True)
     palette = plt.cm.tab10(np.linspace(0, 1, len(cols_in_order)))
 
     for ax, direction in zip(axes, ["A_target_is_X", "B_target_is_X1"]):
@@ -74,18 +74,15 @@ def main():
             patch.set_edgecolor("#444")
 
         ax.set_title(DIRECTION_LABEL[direction], fontsize=13, fontweight="bold")
-        ax.set_ylabel("RMSE" if direction == "A_target_is_X" else "")
+        ax.set_ylabel("RMSE (log scale)" if direction == "A_target_is_X" else "")
+        ax.set_yscale("log")
         ax.tick_params(axis="x", labelrotation=20)
-        ax.grid(True, axis="y", linestyle="--", linewidth=0.6, color="#CCC", alpha=0.7)
+        ax.grid(True, axis="y", which="both", linestyle="--", linewidth=0.6, color="#CCC", alpha=0.7)
         ax.set_axisbelow(True)
         for spine in ax.spines.values():
             spine.set_linewidth(0.8)
             spine.set_edgecolor("#444")
 
-    fig.suptitle(
-        f"NIR Shootout: distribution of RMSE over {n_splits} repeated splits",
-        fontsize=13, fontweight="bold", y=0.99,
-    )
     plt.tight_layout()
     out = Path("res/realdata_boxplot.pdf")
     plt.savefig(out, format="pdf", bbox_inches="tight", dpi=300)

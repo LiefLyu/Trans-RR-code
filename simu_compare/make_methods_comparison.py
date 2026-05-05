@@ -1,6 +1,6 @@
 """Generate methods_comparison.pdf from the post-Adaptive 2*_cv_results JSONs.
 
-Reads:  res/2{gaussian,cauchy,mix}_cv_results_p400_simu1000.json
+Reads:  res/2{gaussian,cauchy,mix}_cv_results_p400_simu500.json
 Writes: res/methods_comparison.pdf  (then to be copied to ustc-overleaf-git/plot/)
 
 Three-panel boxplot, 6 methods for Case I (Gaussian) and 4 methods for Cases II/III.
@@ -24,9 +24,9 @@ bg_color = "white"
 
 distribution_types = ["gaussian", "cauchy", "mix"]
 file_paths = [
-    "res/2gaussian_cv_results_p400_simu1000.json",
-    "res/2cauchy_cv_results_p400_simu1000.json",
-    "res/2mix_cv_results_p400_simu1000.json",
+    "res/2gaussian_cv_results_p400_simu500.json",
+    "res/2cauchy_cv_results_p400_simu500.json",
+    "res/2mix_cv_results_p400_simu500.json",
 ]
 
 RIDGE_ORDER = ["Single RR", "Trans RR", "Trans-RR-Ada", "Pooled RR"]

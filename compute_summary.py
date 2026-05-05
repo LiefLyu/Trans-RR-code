@@ -39,9 +39,9 @@ def section(title):
 
 # ============================================================================
 section("§4.3 Adaptive Trans-RR narrative (Gaussian Case I)")
-gauss = safe_load(EXP / "simu_compare/res/2gaussian_cv_results_p400_simu1000.json")
+gauss = safe_load(EXP / "simu_compare/res/2gaussian_cv_results_p400_simu500.json")
 if gauss is None:
-    print("  NO DATA: 2gaussian_cv_results_p400_simu1000.json not yet present")
+    print("  NO DATA: 2gaussian_cv_results_p400_simu500.json not yet present")
 else:
     print(f"  {'h (dd)':<10} {'SR':>8} {'TR':>8} {'Ada':>8} {'PR':>8} {'SL':>8} {'TL':>8}")
     for dd_str in sorted(gauss.keys(), key=float):
@@ -61,40 +61,68 @@ else:
         print(f"    -> Adaptive at-or-better than both bases at the transition")
 
 # ============================================================================
-section("§4.3 + diagnose_theta theta_star distribution")
-diag = safe_load(EXP / "simu_compare/res/2theta_diagnostic.json")
-if diag is None:
-    print("  NO DATA")
+section("§4.3 + post_hoc theta_star distribution from main JSON")
+# Theta is now extracted from the main experiment JSON's 'theta_star' field
+# (saved per replicate). The standalone diagnose_theta.py is obsolete; use
+# post_hoc_theta_summary.py instead, or read directly here.
+gauss_post = safe_load(EXP / "simu_compare/res/2gaussian_cv_results_p400_simu500.json")
+if gauss_post is None or "theta_star" not in next(iter(gauss_post.values()), {}):
+    print("  NO DATA (or main JSON pre-dates the schema with 'theta_star' field)")
 else:
-    print(f"  {'h':<10} {'theta_mean':>12} {'theta_med':>10} {'at-1':>6} {'at-0':>6} {'interior':>9}")
-    for c in diag["cells"]:
-        s = c["summary"]
-        print(f"  {c['dd']:<10.4f} {s['theta_mean']:>12.3f} {s['theta_median']:>10.2f} "
-              f"{s['n_at_one']:>6d} {s['n_at_zero']:>6d} {s['n_interior']:>9d}")
+    print(f"  {'h':<10} {'theta_mean':>12} {'theta_med':>10} {'at-1 %':>8} {'at-0 %':>8} {'interior %':>11}")
+    for dd_str in sorted(gauss_post.keys(), key=float):
+        cell = gauss_post[dd_str]
+        theta = np.asarray(cell.get("theta_star", []), dtype=float)
+        if len(theta) == 0:
+            continue
+        eps = 1e-6
+        n_one  = int((theta >= 1 - eps).sum())
+        n_zero = int((theta <=     eps).sum())
+        n_int  = int(((theta > eps) & (theta < 1 - eps)).sum())
+        K = len(theta)
+        print(f"  {float(dd_str):<10.4f} {theta.mean():>12.3f} {np.median(theta):>10.2f} "
+              f"{100*n_one/K:>7.1f}% {100*n_zero/K:>7.1f}% {100*n_int/K:>10.1f}%")
     # Interior fraction at h~1
-    h1_cell = next((c for c in diag["cells"] if abs(c["dd"] - 1.0) < 1e-6), None)
-    if h1_cell:
-        n_int = h1_cell["summary"]["n_interior"]
-        K = h1_cell["summary"]["K"]
-        print(f"\n  -> §4.3 Adaptive narrative number: interior theta in {n_int}/{K} = {100*n_int/K:.0f}% of replications at h=1.0")
+    dds = [float(k) for k in gauss_post.keys()]
+    h1 = min(dds, key=lambda x: abs(x - 1.0))
+    cell_h1 = gauss_post[str(h1)]
+    theta_h1 = np.asarray(cell_h1.get("theta_star", []), dtype=float)
+    if len(theta_h1) > 0:
+        n_int_h1 = int(((theta_h1 > 1e-6) & (theta_h1 < 1 - 1e-6)).sum())
+        K_h1 = len(theta_h1)
+        print(f"\n  -> §4.3 Adaptive narrative: at h={h1:.4f}, interior theta in {n_int_h1}/{K_h1} = {100*n_int_h1/K_h1:.0f}% of replications")
 
 # ============================================================================
-section("§4.4 (delta, eta) sensitivity heatmap")
-heatmap = safe_load(EXP / "simu_compare/res/2sensitivity_delta_eta_p400_simu200.json")
+section("§4.5 (delta, eta) heatmap sensitivity (B1)")
+heatmap = safe_load(EXP / "simu_compare/res/2sensitivity_delta_eta_p400_simu500.json")
 if heatmap is None:
     print("  NO DATA")
 else:
+    # Schema: cells is list of dicts with case, h, delta, eta, mean_err (4 methods)
     cells = heatmap["cells"]
-    print(f"  {'(delta, eta)':<16} {'Trans-RR mean':>14} {'Single-RR mean':>16} {'Adaptive mean':>15}")
-    trans_means = []
-    for k, v in cells.items():
-        d, e = v["delta"], v["eta"]
-        tr = v["trans_mean"]; sr = v["single_mean"]; ad = v["adaptive_mean"]
-        trans_means.append(tr)
-        print(f"  ({d:.2f}, {e:.2f})    {tr:>14.4f} {sr:>16.4f} {ad:>15.4f}")
-    rng_pct = 100 * (max(trans_means) - min(trans_means)) / np.mean(trans_means)
-    print(f"\n  Trans-RR variation across 12 cells: max={max(trans_means):.4f}, min={min(trans_means):.4f}, range={rng_pct:.1f}% of mean")
-    print(f"  -> §4.4 (delta, eta) paragraph fill: '... varies by {rng_pct:.1f}\\%'")
+    print(f"  cells: {len(cells)}")
+    # Aggregate Trans-RR variation across (delta, eta) per (case, h)
+    print(f"\n  {'case':<10} {'h':<10} {'TR min':>10} {'TR max':>10} {'TR range %':>12}")
+    by_ch = {}
+    for c in cells:
+        key = (c["case"], round(c["h"], 4))
+        by_ch.setdefault(key, []).append(c["mean_err"])
+    for (case, h), arrs in sorted(by_ch.items(), key=lambda kv: (kv[0][0], kv[0][1])):
+        arrs = np.array(arrs)            # (9 cells, 4 methods)
+        tr_means = arrs[:, 1]            # Trans-RR column
+        rng_pct = 100 * (tr_means.max() - tr_means.min()) / tr_means.mean()
+        print(f"  {case:<10} {h:<10.4f} {tr_means.min():>10.4f} {tr_means.max():>10.4f} {rng_pct:>11.1f}%")
+    # Ranking-preservation check across all (case, h) cells
+    n_preserved = 0
+    n_total = 0
+    for c in cells:
+        m = c["mean_err"]
+        # ranking: order of (Single, Trans, Ada, Pooled)
+        # Just record whether ada is at-or-better than min(Single, Trans)
+        n_total += 1
+        if m[2] <= min(m[0], m[1]) + 1e-9:
+            n_preserved += 1
+    print(f"\n  Ada at-or-better than better base in {n_preserved}/{n_total} cells")
 
 # ============================================================================
 section("§4.4 MSE-CV / pseudo-Huber sensitivity")

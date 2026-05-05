@@ -18,6 +18,7 @@ if _EXP_ROOT not in sys.path:
     sys.path.insert(0, _EXP_ROOT)
 from transrr_lib.robust_ridge_optimizer import solve_robust_ridge
 from transrr_lib.find_tau_opt import find_optimal_tau_robust_ridge
+from transrr_lib._grids import REALDATA_TAU_GRID
 
 # Adaptive uses an INDEPENDENT KFold partition (seed=2), distinct from
 # the partition used inside find_optimal_tau_robust_ridge (seed=1) for
@@ -39,8 +40,9 @@ REPEAT_SEED_START = 1000
 DELTA_PARAM = 1.35
 ETA_PARAM = 0.1
 
-# Common ridge / lasso grid
-COMMON_GRID = np.logspace(-4, 1, 11)
+# Common ridge / lasso grid (different from simulation TAU_GRID because the
+# real-data NIR predictors are not on a unit-variance scale; see _grids.py).
+COMMON_GRID = REALDATA_TAU_GRID
 
 # Adaptive Trans-RR weight grid (Phase 3a)
 THETA_GRID = np.linspace(0, 1, 11)

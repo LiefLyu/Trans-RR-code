@@ -18,3 +18,31 @@ __pycache__/
 # Misc
 *~
 *.swp
+
+# ============================================================
+# Internal / exploratory artefacts not used by the paper
+# ============================================================
+
+# Internal diagnostic scripts (not part of any paper figure or table).
+simu_compare/_smoke_test.py
+simu_compare/diagnose_oracle_vs_cv.py
+simu_compare/diagnose_tau_grid.py
+simu_compare/run_chain_after_cauchy.sh.OBSOLETE
+
+# Local orchestration shell scripts (hardcoded paths to one machine).
+simu_compare/run_all.sh
+simu_compare/run_b5_and_ar1.sh
+simu_compare/run_post_chain.sh
+
+# Diagnostic outputs (not referenced in the paper).
+simu_compare/res/2oracle_vs_cv_*
+simu_compare/res/2tau_grid_diagnostic*
+
+# Real-data exploratory variants (alternative seeds, alternative grids,
+# autoscale, etc.) not referenced in the paper.
+realdata/res/realdata_*_g13.*
+realdata/res/realdata_*_seed1000_autoscale.*
+realdata/res/realdata_*_seed1000_widegrid.*
+realdata/res/realdata_*_seed2000.*
+realdata/res/realdata_rmse_autoscale*
+realdata/run_realdata_mae_parallel.py
